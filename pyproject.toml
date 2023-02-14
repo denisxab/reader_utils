@@ -3,7 +3,7 @@ name = "py_utils"
 version = "0.1.0"
 description = ""
 authors = ["de"]
-readme = "README.md"
+# readme = "README.md"
 packages = [{include = "py_utils"}]
 
 [tool.poetry.dependencies]
