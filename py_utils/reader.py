@@ -1,5 +1,5 @@
 import pathlib
-from base import get_encoding
+from .base import get_encoding
 from pathlib import Path
 from abc import abstractstaticmethod
 import re
@@ -89,7 +89,7 @@ class XlsxParse(BaseParse):
         # Выбрать файл
         self.workbook: Book = open_workbook(path)
 
-    def goParse(self, template: str, ifNone='null', sheet: int = 0, esce_call: typing.Callable = BaseParse.escaSql) -> typing.Iterator[str]:
+    def goParse(self, template: str | None = None, ifNone='null', sheet: int = 0, esce_call: typing.Callable = BaseParse.escaSql) -> typing.Iterator[str | dict[str, str]]:
         """
 
         Конвертировать данный из XLSX файл в шаблон
@@ -99,7 +99,9 @@ class XlsxParse(BaseParse):
         будут считаться как обычные данные. Вы можете обращаться к данным через шаблон `template`, в котором нужно указать имя заголовка.
 
 
-        :param template: Шаблон построения ответа `insert into Таблиц value ({ИмяСтолбца_1},{ИмяСтолбца_N})`
+        :param template:
+            Шаблон построения ответа `insert into Таблиц value ({ИмяСтолбца_1},{ИмяСтолбца_N})`
+            Если указан `None` то функция вернет словарь.  
         :param ifNone: Что поставить если ячейка пустая
         :param sheet: Номер листа с которого читать
         :param out_path: Путь к файлу в который нужно записать ответ
@@ -112,7 +114,8 @@ class XlsxParse(BaseParse):
         """
 
         # Создаем правила для конвертации данных
-        rules_convert, template = RulesConvert.create_rules(template)
+        if template:
+            rules_convert, template = RulesConvert.create_rules(template)
 
         # Выбрать страницу
         worksheet: Sheet = self.workbook.sheet_by_index(sheet)
@@ -135,10 +138,13 @@ class XlsxParse(BaseParse):
                 for name, col in zip(head, range(0, worksheet.ncols))
             }
             try:
-                # Конвертация в указанный тип
-                tmp = RulesConvert.convert_from_rules(tmp, rules_convert)
-                # Формируем ответ на основе переданной шаблонной строки
-                yield template.format(**tmp)
+                if template:
+                    # Конвертация в указанный тип
+                    tmp = RulesConvert.convert_from_rules(tmp, rules_convert)
+                    # Формируем ответ на основе переданной шаблонной строки
+                    yield template.format(**tmp)
+                else:
+                    yield tmp
             except KeyError as e:
                 raise KeyError(f"{e}, Не найден столбец с указаны заголовком")
 
@@ -250,11 +256,9 @@ if __name__ == '__main__':
     # print(dbf.FieldNames())
     # print(dbf.goIn('ID_D_GROUP', {-999, 11, 32, 23}))
 
-
     # """update dicinfo set EXTCODE={Код:int} where refid=-20222022 and DICNAME='{Наименование}';"""
-    res=[]
+    res = []
     for x in obj.goParse("""{Наименование},"""):
         print(x)
         res.append(x)
     (pathlib.Path(__file__).parent/'res.txt').write_text('\n'.join(res))
-    
